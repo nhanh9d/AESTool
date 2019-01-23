@@ -9,46 +9,68 @@ namespace EncryptTool.AES
 {
     class AESEncrypt
     {
+        string PrivateKey = "password";
+        string PublicKey = "asdqweasdqweasdqweas";
+
         private AesCryptoServiceProvider Aes;
-
-        public AesCryptoServiceProvider Aes1 { get => Aes; set => Aes = value; }
-
+        /// <summary>
+        /// Dùng để tạo đối tượng cho việc mã hóa
+        /// </summary>
         public AESEncrypt()
         {
-            Aes1 = new AesCryptoServiceProvider();
+            PasswordDeriveBytes pdb = new PasswordDeriveBytes(Encoding.Unicode.GetBytes(PrivateKey.ToCharArray()), Encoding.Unicode.GetBytes(PublicKey.ToCharArray()));
+            Aes = new AesCryptoServiceProvider();
+            Aes.BlockSize = 128;
+            Aes.KeySize = 256;
+            Aes.Mode = CipherMode.CBC;
+            Aes.Padding = PaddingMode.PKCS7;
+            Aes.Key = pdb.GetBytes(32); // Tạo key ngẫu nhiên
+            Aes.IV = pdb.GetBytes(16); // Tạo key ngẫu nhiên
+            //Aes.GenerateIV(); // Tạo init vector ngẫu nhiên
         }
-        public AESEncrypt(AesCryptoServiceProvider Aes) {
-            this.Aes1 = Aes;
-        }
-        public string Encrypt(string plainText, out string key, out string iv)
+        /// <summary>
+        /// Dùng để tạo đối tượng cho việc giải mã
+        /// </summary>
+        /// <param name="_Key">Truyền key đã được nhận</param>
+        /// <param name="_IV">Truyền vector đã được nhận</param>
+        public AESEncrypt(string _Key, string _IV, PaddingMode pm)
         {
-            Aes1.BlockSize = 128;
-            Aes1.KeySize = 256;
-            Aes1.Padding = PaddingMode.PKCS7;
-            Aes1.Mode = CipherMode.CBC;
-            Aes1.GenerateKey();
-            Aes1.GenerateIV();
-            key = ASCIIEncoding.ASCII.GetString(Aes1.Key);
-            iv = ASCIIEncoding.ASCII.GetString(Aes1.IV);
-            byte[] plainTextBytes = ASCIIEncoding.ASCII.GetBytes(plainText);
-            ICryptoTransform transform = Aes1.CreateEncryptor(Aes1.Key, Aes1.IV);
-            byte[] encryptBytes = transform.TransformFinalBlock(plainTextBytes, 0, plainTextBytes.Length);
-            string outPut = Convert.ToBase64String(encryptBytes);
-            return outPut;
+            PasswordDeriveBytes pdb = new PasswordDeriveBytes(Encoding.Unicode.GetBytes(PrivateKey.ToCharArray()), Encoding.Unicode.GetBytes(PublicKey.ToCharArray()));
+            Aes = new AesCryptoServiceProvider();
+            Aes.BlockSize = 128;
+            Aes.KeySize = 256;
+            Aes.Mode = CipherMode.CBC;
+            Aes.Padding = pm;
+            Aes.Key = pdb.GetBytes(32); // Tạo key ngẫu nhiên
+            Aes.IV = pdb.GetBytes(16); // Tạo key ngẫu nhiên
+            //Aes.Key = ASCIIEncoding.ASCII.GetBytes(_Key); //Gán lại key đã lưu
+            //Aes.IV = ASCIIEncoding.ASCII.GetBytes(_IV); //Gán lại iv đã lưu
         }
-        public string Decrypt(string encryptedText, string key, string iv)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="plainText"></param>
+        /// <param name="key"></param>
+        /// <param name="iv"></param>
+        /// <returns></returns>
+        public string Encrypt(string plainText, out string key, out string iv, out PaddingMode pm)
         {
-            Aes1.BlockSize = 128;
-            Aes1.KeySize = 256;
-            Aes1.Padding = PaddingMode.PKCS7;
-            Aes1.Mode = CipherMode.CBC;
-            Aes1.Key = ASCIIEncoding.ASCII.GetBytes(key);
-            Aes1.IV = ASCIIEncoding.ASCII.GetBytes(iv);
-            ICryptoTransform transform = Aes1.CreateDecryptor(Aes1.Key, Aes1.IV);
-            byte[] encryptedBytes = Convert.FromBase64String(encryptedText);
-            byte[] decryptBytes = transform.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
-            string outPut = ASCIIEncoding.ASCII.GetString(decryptBytes);
-            return outPut;
+            pm = Aes.Padding;
+            key = ASCIIEncoding.ASCII.GetString(Aes.Key); //out key
+            iv = ASCIIEncoding.ASCII.GetString(Aes.IV); //out init vector
+            ICryptoTransform transform = Aes.CreateEncryptor(); //tạo đối tượng mã hóa
+            byte[] plainTextBytes = ASCIIEncoding.ASCII.GetBytes(plainText.Trim()); // chuyển chuỗi nhập vào thành mảng nhị phân
+            byte[] encryptBytes = transform.TransformFinalBlock(plainTextBytes, 0, plainText.Length); // làm tròn thành mảng mã hóa (là mũ n của 2)
+            string outPut = Convert.ToBase64String(encryptBytes); //Chuyển mảng mã hóa thành chuỗi mã hóa
+            return outPut; //Trả chuỗi đã được mã hóa
+        }
+        public string Decrypt(string encryptedText)
+        {
+            ICryptoTransform transform = Aes.CreateDecryptor(); //Tạo đối tượng giải mã
+            byte[] encryptedTextBytes = Convert.FromBase64String(encryptedText); //Chuyển chuỗi mã hóa thành mảng nhị phân
+            byte[] decryptBytes = transform.TransformFinalBlock(encryptedTextBytes, 0, encryptedTextBytes.Length); // làm tròn thành mảng giải mã
+            string outPut = ASCIIEncoding.ASCII.GetString(decryptBytes); //Chuyển mảng giải mã thành chuỗi giải mã
+            return outPut; //Trả chuỗi đã được giải mã
         }
     }
 }
